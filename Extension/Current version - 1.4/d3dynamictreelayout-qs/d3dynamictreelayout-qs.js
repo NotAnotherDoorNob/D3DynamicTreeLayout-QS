@@ -1,8 +1,8 @@
 define( [
 	'qlik',
 	'./extension-properties',
-	'./js/d3',
-	'./js/rvr_tree'
+	'./d3',
+	'./rvr_tree'
 ],
 function ( qlik, extension_properties, d3, rvr_tree ) {
 	return {
@@ -283,7 +283,7 @@ function renderChart(planted_tree, element, object_id, treeProperties) {
 		var	margin = {top: 10, right: 20, bottom: 30, left: 40};
 	}
 	if(treeProperties.treeLayout.typeOfLeaf=="Rectangle"){
-		var	margin = {top: 30, right: 20, bottom: 30, left: 40};
+		var	margin = {top: -10, right: 0, bottom: -10, left: 0};
 	}
 
 	var	width = element[0].clientWidth - margin.left - margin.right,
@@ -477,22 +477,19 @@ function renderChart(planted_tree, element, object_id, treeProperties) {
 			  .remove();
 
 			} else if(treeProperties.treeLayout.typeOfLeaf=="Rectangle"){
-
 				/***** Rendering the actual tree ******/
 				var nodeEnter = node.enter().append("svg:g")
 					.attr("class", "node")
 					.style("font", font+"px sans-serif")
 					.attr("transform", function(d) { return tree_orientation=="Horizontal" ? "translate(" + source.y0 + "," + source.x0 + ")" : "translate(" + source.x0 + "," + source.y0 + ")"; });
 
-				//Generate rectangles with svg text only
-				if(treeProperties.treeLayout.rectangle.measureSetRenderType != 'measure_html'){
-					nodeEnter.append("svg:rect")
+				nodeEnter.append("svg:rect")
 			        .attr("width", 1e-6)
 			        .attr("height", 1e-6)
 			        .attr("y", max_text_height/2*-1)
 			        .attr("x", max_text_width/2*-1)
-			        // .attr("rx", 0) //round corners here
-			        // .attr("ry", 0) //round corners here
+			        .attr("rx", 5) //round corners here
+			        .attr("ry", 5) //round corners here
 			        .style("opacity", 0)
 			        .style("cursor", "default")
 			        .style("stroke", function(d){ if(treeProperties.treeLayout.leaf.activateDynamicColors){ return d.strokeColor; } else return treeProperties.treeLayout.leaf.strokeColor; })
@@ -504,144 +501,92 @@ function renderChart(planted_tree, element, object_id, treeProperties) {
 					  		if(treeProperties.treeLayout.leaf.activateDynamicColors){ return d.childFillColor; } else { return treeProperties.treeLayout.leaf.childFillColor }; 
 					  	}
 				  	})
-			        .on("click", function(d) { if(!treeProperties.treeLayout.rectangle.doubleClick) toggle(d); update(d); })
+			        .on("click", function(d) { if(!(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.activateManualMeasure)||!treeProperties.treeLayout.rectangle.doubleClick) toggle(d); update(d); })
 			        .on("dblclick", function(d) { 
 			        	if(treeProperties.treeLayout.rectangle.doubleClick){
 			        		toggle(d); 
 	  						update(d);
-	  						if(treeProperties.treeMeasure.activateManualMeasure)	// when the mouse leaves a circle, do the following
+	  						if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.activateManualMeasure)	// when the mouse leaves a circle, do the following
 							    toolTip.transition()									// declare the transition properties to fade-out the div
 							            .duration(500)									// it shall take 500ms
 							            .style("opacity", "0")							// and go all the way to an opacity of nil
 							            .style("z-index", -1); 
 			        	}					
 					 })
-			        .on("mouseover", function(d) { if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_mouse_hover') node_onMouseOver(d);})
+			        .on("mouseover", function(d) { if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.activateManualMeasure) node_onMouseOver(d);})
 					.on("mouseout", function(d) {	
-					  	if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_mouse_hover')	// when the mouse leaves a circle, do the following
+					  	if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.activateManualMeasure)	// when the mouse leaves a circle, do the following
 					    toolTip.transition()									// declare the transition properties to fade-out the div
 					            .duration(500)									// it shall take 500ms
 					            .style("opacity", "0")							// and go all the way to an opacity of nil
 					            .style("z-index", -1);							
 					 });
 
-					nodeEnter.append("svg:text")
-					  .attr("x", function(d) { return tree_orientation=="Horizontal" ? 0 : 0;	})
-					  .attr("dy", tree_orientation=="Horizontal" ? (treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_text' ? (max_text_height/7*-1) : "0.35em") : (treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_text'  ? (max_text_height/5*-1) : "0.35em"))
-					  .attr("text-anchor", "middle")
-					  .text(function(d) { return d.name; })
-					  .style("fill-opacity", 1e-6)
-					  .style("fill", font_color)
-					  .style("cursor", "default")
-					  .style("font-weight","bold")
-					  .on("click", function(d) { if(!treeProperties.treeLayout.rectangle.doubleClick) toggle(d); update(d); })
-					  .on("dblclick", function(d) { 
-				        	if(treeProperties.treeLayout.rectangle.doubleClick){
-				        		toggle(d); 
-		  						update(d);
-		  						if(treeProperties.treeMeasure.activateManualMeasure)		// when the mouse leaves a circle, do the following
-								    toolTip.transition()									// declare the transition properties to fade-out the div
-								            .duration(500)									// it shall take 500ms
-								            .style("opacity", "0")							// and go all the way to an opacity of nil
-								            .style("z-index", -1); 
-				        	}					
-						 })
-					  .on("mouseover", function(d) { if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_mouse_hover') node_onMouseOver(d);})
-					  .on("mouseout", function(d) {	
-					  	if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_mouse_hover')	// when the mouse leaves a circle, do the following
-					    toolTip.transition()									// declare the transition properties to fade-out the div
-					            .duration(500)									// it shall take 500ms
-					            .style("opacity", "0")							// and go all the way to an opacity of nil
-					            .style("z-index", -1);							
-					    });
-
-					if(treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_text'){
-						if(treeProperties.treeMeasure.activateManualMeasure){
-						nodeEnter.append("svg:text")
-						  .attr("x", function(d) { return tree_orientation=="Horizontal" ? 0 : 0;	})
-						  .attr("dy", tree_orientation=="Horizontal" ? "1.1em" : "1.1em")
-						  .attr("text-anchor", "middle")
-						  .text(function(d) { return d.size; })
-						  .style("fill-opacity", 1)
-						  .style("fill", font_color)
-						  .style("cursor", "default")
-						  .on("click", function(d) { if(!(treeProperties.treeMeasure.activateManualMeasure)||!treeProperties.treeLayout.rectangle.doubleClick) toggle(d); update(d); })
-						  .on("dblclick", function(d) { 
-				        	if(treeProperties.treeLayout.rectangle.doubleClick){
-				        		toggle(d); 
-		  						update(d);
-		  						if(treeProperties.treeMeasure.activateManualMeasure)	// when the mouse leaves a circle, do the following
-								    toolTip.transition()									// declare the transition properties to fade-out the div
-								            .duration(500)									// it shall take 500ms
-								            .style("opacity", "0")							// and go all the way to an opacity of nil
-								            .style("z-index", -1); 
-				        	}					
-						 })
-						  .on("mouseover", function(d) { if(treeProperties.treeMeasure.activateManualMeasure) node_onMouseOver(d);})
-						  .on("mouseout", function(d) {	
-						  	if(treeProperties.treeMeasure.activateManualMeasure)	// when the mouse leaves a circle, do the following
-						    toolTip.transition()									// declare the transition properties to fade-out the div
-						            .duration(500)									// it shall take 500ms
-						            .style("opacity", "0")							// and go all the way to an opacity of nil
-						            .style("z-index", -1);							
-						    });
-						}
-					}
-				}//End of - Generate rectangles with svg text only
-
-				//Generate rectangles with html contents
-				if(treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_html'){
-					nodeEnter.append("foreignObject") 
-					 	.attr("x", 0)
-					 	.attr("dy", 0)
-					 	.attr("width", treeProperties.treeLayout.rectangle.width)
-					 	.attr("height", treeProperties.treeLayout.rectangle.height)
-					 	.append('xhtml:div').html(function(d) { return d.size; })
-					 	.on("click", function(d) { if(!(treeProperties.treeMeasure.activateManualMeasure)||!treeProperties.treeLayout.rectangle.doubleClick) toggle(d); update(d); })
-				     	.on("dblclick", function(d) { 
+				nodeEnter.append("svg:text")
+				  .attr("x", function(d) { return tree_orientation=="Horizontal" ? 0 : 0;	})
+				  .attr("dy", tree_orientation=="Horizontal" ? (treeProperties.treeMeasure.activateManualMeasure && !treeProperties.treeLayout.rectangle.activateManualMeasure ? (max_text_height/7*-1) : "0.35em") : (treeProperties.treeMeasure.activateManualMeasure && !treeProperties.treeLayout.rectangle.activateManualMeasure ? (max_text_height/5*-1) : "0.35em"))
+				  .attr("text-anchor", "middle")
+				  .text(function(d) { return d.name; })
+				  .style("fill-opacity", 1e-6)
+				  .style("fill", font_color)
+				  .style("cursor", "default")
+				  .style("font-weight","bold")
+				  .on("click", function(d) { if(!(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.activateManualMeasure)||!treeProperties.treeLayout.rectangle.doubleClick) toggle(d); update(d); })
+				  .on("dblclick", function(d) { 
 			        	if(treeProperties.treeLayout.rectangle.doubleClick){
 			        		toggle(d); 
 	  						update(d);
-	  						if(treeProperties.treeMeasure.activateManualMeasure)	// when the mouse leaves a circle, do the following
+	  						if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.activateManualMeasure)	// when the mouse leaves a circle, do the following
 							    toolTip.transition()									// declare the transition properties to fade-out the div
 							            .duration(500)									// it shall take 500ms
 							            .style("opacity", "0")							// and go all the way to an opacity of nil
 							            .style("z-index", -1); 
 			        	}					
-					})
-				}
-
-				if(treeProperties.treeLayout.rectangle.selectable){
-					if(treeProperties.treeLayout.rectangle.measureSetRenderType != 'measure_html'){
-						nodeEnter.append("svg:image")
-							 .attr("x", max_text_width/2 - 16)
-							 .attr("y", max_text_height/2 - 16)
-							 .attr("width", 15)
-				        	 .attr("height", 15)
-							 .attr("xlink:href", function(d){ return tree_orientation=="Horizontal" ? "/extensions/d3dynamictreelayout-qs/images/next_low_color.png" : "/extensions/d3dynamictreelayout-qs/images/down_low_color.png" })
-							 .style("opacity", 1e-6)
-							 .style("cursor", "pointer")
-							 .on("click", function(d){ selectData(d) });
-					}else{
-						nodeEnter.append("svg:image")
-							.attr("x", treeProperties.treeLayout.rectangle.width - 16)
-							.attr("y", treeProperties.treeLayout.rectangle.height - 16)
-							.attr("width", 15)
-			        		.attr("height", 15)
-							.attr("xlink:href", function(d){ return tree_orientation=="Horizontal" ? "/extensions/d3dynamictreelayout-qs/images/next_low_color.png" : "/extensions/d3dynamictreelayout-qs/images/down_low_color.png" })
-							.style("opacity", 1e-6)
-							.style("cursor", "pointer")
-							.on("click", function(d){ selectData(d) });
-					}
+					 })
+				  .on("mouseover", function(d) { if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.activateManualMeasure) node_onMouseOver(d);})
+				  .on("mouseout", function(d) {	
+				  	if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.activateManualMeasure)	// when the mouse leaves a circle, do the following
+				    toolTip.transition()									// declare the transition properties to fade-out the div
+				            .duration(500)									// it shall take 500ms
+				            .style("opacity", "0")							// and go all the way to an opacity of nil
+				            .style("z-index", -1);							
+				    });
+				 
+				if(treeProperties.treeMeasure.activateManualMeasure && !treeProperties.treeLayout.rectangle.activateManualMeasure){
+					nodeEnter.append("svg:text")
+					  .attr("x", function(d) { return tree_orientation=="Horizontal" ? 0 : 0;	})
+					  .attr("dy", tree_orientation=="Horizontal" ? "1.1em" : "1.1em")
+					  .attr("text-anchor", "middle")
+					  .text(function(d) { return d.size; })
+					  .style("fill-opacity", 1)
+					  .style("fill", font_color)
+					  .style("cursor", "default")
+					  .on("click", function(d) { if(!(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.activateManualMeasure)||!treeProperties.treeLayout.rectangle.doubleClick) toggle(d); update(d); })
+					  .on("dblclick", function(d) { 
+			        	if(treeProperties.treeLayout.rectangle.doubleClick){
+			        		toggle(d); 
+	  						update(d);
+	  						if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.activateManualMeasure)	// when the mouse leaves a circle, do the following
+							    toolTip.transition()									// declare the transition properties to fade-out the div
+							            .duration(500)									// it shall take 500ms
+							            .style("opacity", "0")							// and go all the way to an opacity of nil
+							            .style("z-index", -1); 
+			        	}					
+					 })
+					  .on("mouseover", function(d) { if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.activateManualMeasure) node_onMouseOver(d);})
+					  .on("mouseout", function(d) {	
+					  	if(treeProperties.treeMeasure.activateManualMeasure && treeProperties.treeLayout.rectangle.activateManualMeasure)	// when the mouse leaves a circle, do the following
+					    toolTip.transition()									// declare the transition properties to fade-out the div
+					            .duration(500)									// it shall take 500ms
+					            .style("opacity", "0")							// and go all the way to an opacity of nil
+					            .style("z-index", -1);							
+					    });
 				}
 	
-				var html_v_adjust = 0;
-				if(treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_html')
-					html_v_adjust = treeProperties.treeLayout.rectangle.height/2;
 
 		        var nodeUpdate = node.transition()
 				  .duration(duration)
-				  .attr("transform", function(d) { return tree_orientation=="Horizontal" ? "translate(" + d.y + "," + (d.x - html_v_adjust) + ")" : "translate(" + d.x + "," + d.y + ")"; });
+				  .attr("transform", function(d) { return tree_orientation=="Horizontal" ? "translate(" + d.y + "," + d.x + ")" : "translate(" + d.x + "," + d.y + ")"; });
 
 				nodeUpdate.select("rect")
 				  .attr("width", max_text_width)
@@ -761,47 +706,76 @@ function renderChart(planted_tree, element, object_id, treeProperties) {
 	    			.size([tree_orientation=="Horizontal" ? height : width, tree_orientation=="Horizontal" ? width : height]);
 
 	    	function rectWidthTranslation(source){
-	    		if(treeProperties.treeLayout.rectangle.measureSetRenderType != 'measure_html'){
-					var nodes = tree.nodes(source);
-					var font=treeProperties.treeLayout.rectangle.fontSize;
+				var nodes = tree.nodes(source);
+				var font=treeProperties.treeLayout.rectangle.fontSize;
 
-					tmp_canvas = document.createElement("canvas");
-					var tmp_canvasContext = tmp_canvas.getContext("2d");
+				vis_2 = d3.select("#"+object_id).append("svg:svg")
+				 .attr("width", width + margin.left + margin.right)
+				 .attr("height", height + margin.top + margin.bottom)
+				 .attr("class", "dummyNode");
 
-					nodes.forEach(function (node){
-						//checking for title width
-						tmp_canvasContext.font = "bold "+font+"px serif";
-						if(max_title_width < tmp_canvasContext.measureText(node.name).width)
-							max_title_width = tmp_canvasContext.measureText(node.name).width;
-						if(max_title_height < tmp_canvasContext.measureText("M").width)
-							max_title_height = tmp_canvasContext.measureText("M").width;
+				vis_2.append("svg:g")
+				 .attr("transform", tree_orientation=="Horizontal" ? "translate(90,"+ margin.top + ")" : "translate("+ margin.bottom +","+ margin.top + ")"); //rect horizontal
 
-						//checking for measure width
-						tmp_canvasContext.font = font+"px serif";
-						if(treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_text' && max_measure_width < tmp_canvasContext.measureText(node.size).width)
-							max_measure_width = tmp_canvasContext.measureText(node.size).width;
-						if(max_measure_height < tmp_canvasContext.measureText("M").width)
-							max_measure_height = tmp_canvasContext.measureText("M").width;
-					});
+				var dummyNode = vis_2.selectAll("g.dummyNode")
+				  .data(nodes, function(d) { return d.id || (d.id = ++i); });
 
-					max_text_width = max_title_width;
-					if(max_measure_width>max_title_width)
-							max_text_width=max_measure_width;
-					max_text_height = max_title_height+max_measure_height;
+				dummyNodes = dummyNode.enter().append("g")
+					.attr("class", "dummyNode")
+					.style("font", font+"px sans-serif")
+			      	.attr("transform", function(d) { return "translate(" + source.x0 + "," + source.y0 + ")"; });
 
-					if((max_text_width+30)<100)
-						max_text_width = 100;
-					else
-						max_text_width +=30;
+		      	dummyTitle = dummyNodes.append("svg:text")
+				  .attr("x", function(d) { return tree_orientation=="Horizontal" ? 0 : 0;	})
+				  .attr("dy", tree_orientation=="Horizontal" ? (treeProperties.treeMeasure.activateManualMeasure ? "1em" : ".35em") : (treeProperties.treeMeasure.activateManualMeasure ? 0 : "1.35em"))
+				  .attr("text-anchor", "middle")
+				  .text(function(d) { return d.name; })
+				  .style("fill-opacity", 1e-6)
+				  .style("font-weight","bold");
 
-					if(max_text_height<50)
-						max_text_height = 50;
-					else
-						max_text_height =max_text_height+20;
-				}else{
-					max_text_width = treeProperties.treeLayout.rectangle.width;
-					max_text_height = treeProperties.treeLayout.rectangle.height;
-				}				
+				dummyText = dummyNodes.append("svg:text")
+				  .attr("x", function(d) { return tree_orientation=="Horizontal" ? 0 : 0;	})
+				  .attr("dy", tree_orientation=="Horizontal" ? "1.2em" : "1.35em")
+				  .attr("text-anchor", function(d) { return tree_orientation=="Horizontal" ? "start" : "middle"; })
+				  .text(function(d) { return d.size; })
+				  .style("fill-opacity", 1e-6)
+				  .style("cursor", "pointer");
+
+				dummyNodesEval = dummyNodes[0];
+
+				dummyNodesEval.forEach(function(d){
+						if(max_title_width < d.children[0].clientWidth)
+							max_title_width = d.children[0].clientWidth;
+						if(max_measure_width < d.children[1].clientWidth)
+							max_measure_width = d.children[1].clientWidth;
+						if(max_title_height < d.children[0].clientHeight)
+							max_title_height = d.children[0].clientHeight;
+						if(max_measure_height < d.children[1].clientHeight)
+							max_measure_height = d.children[1].clientHeight;
+				});
+
+				max_text_width = max_title_width;
+				if(!treeProperties.treeLayout.rectangle.activateManualMeasure && max_measure_width>max_title_width)
+						max_text_width=max_measure_width;
+				max_text_height = max_title_height+max_measure_height;
+				
+				if((max_text_width+30)<100)
+					max_text_width = 500;
+				else
+					max_text_width +=140;
+
+				if(max_text_height<50)
+					max_text_height = 64;
+				else
+					max_text_height =max_text_height+60;
+
+				d3.selectAll(".dummyNode").remove();
+				
+				delete dummyNodes;
+				delete dummyTitle;
+				delete dummyText;
+				delete dummyNodesEval;
+				delete vis_2;
 			}
 			
 			root = planted_tree;
@@ -826,34 +800,18 @@ function renderChart(planted_tree, element, object_id, treeProperties) {
 				.attr("height", height + margin.top + margin.bottom)
 				.append("svg:g");
 
-			switch(treeProperties.treeLayout.orientation) { //rectangle position
+			switch(treeProperties.treeLayout.orientation) {
 			    case "Horizontal_lr":
-			    		if(treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_html'){
-			    			vis_add_rect_width = 10;
-			    		}
 			        vis.attr("transform", "translate("+ vis_add_rect_width +","+ margin.top + ")" ); 
 			        break;
 			    case "Horizontal_rl":
-			    		if(treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_html'){
-			    			vis_add_rect_width += treeProperties.treeLayout.rectangle.width/4;
-			    		}else{
-			    			vis_add_rect_width = 20;
-			    		}
-			        vis.attr("transform", "translate("+ (width-vis_add_rect_width) +","+ (margin.top) + ")" ); 
+			        vis.attr("transform", "translate("+ (width-vis_add_rect_width) +","+ margin.top + ")" ); 
 			        break;
 			    case "Vertical_tb":
-			    	if(treeProperties.treeLayout.rectangle.measureSetRenderType != 'measure_html'){
-			    		vis_add_rect_width = 0;
-			    	}else{
-			    		vis_add_rect_height = 0;
-			    	}
-			        vis.attr("transform", "translate("+ (margin.bottom-vis_add_rect_width) +","+ vis_add_rect_height + ")"); 
+			        vis.attr("transform", "translate("+ margin.bottom +","+ vis_add_rect_height + ")"); 
 			        break;
 			    case "Vertical_bt":
-			    	if(treeProperties.treeLayout.rectangle.measureSetRenderType != 'measure_html'){
-			    		vis_add_rect_width = 0
-			    	}
-			        vis.attr("transform", "translate("+ (margin.bottom-vis_add_rect_width) +","+ height + ")");
+			        vis.attr("transform", "translate("+ margin.bottom +","+ (height-vis_add_rect_height) + ")");
 			        break;
 			    default:
 			    	//default will assume horinzontal left to right
@@ -861,96 +819,19 @@ function renderChart(planted_tree, element, object_id, treeProperties) {
 			        break;
 			}
 
-			var diagonal = d3.svg.diagonal().projection(function(d) { //diagonal (stroke) origin
-					if(treeProperties.treeLayout.typeOfLeaf=="Rectangle"){
-						if(treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_html'){
-							switch(treeProperties.treeLayout.orientation) {
-						    case "Horizontal_lr":
-						        return [d.y+treeProperties.treeLayout.rectangle.width, d.x];
-						        break;
-						    case "Horizontal_rl":
-						        return [d.y, d.x];
-						        break;
-						    case "Vertical_tb":
-						         return [d.x+(treeProperties.treeLayout.rectangle.width/2), d.y+(treeProperties.treeLayout.rectangle.height)];
-						        break;
-						    case "Vertical_bt":
-						    	return [d.x+(treeProperties.treeLayout.rectangle.width/2), d.y];
-						        break;
-						    default:
-						    	//default will assume horinzontal left to right
-						        vis.attr("transform", "translate("+ vis_add_rect_width +","+ margin.top + ")" ); 
-						        break;
-							}
-						}else{
-							switch(treeProperties.treeLayout.orientation) {
-						    case "Horizontal_lr":
-						        return [(d.y+max_text_width/2), d.x];
-						        break;
-						    case "Horizontal_rl":
-						        return [(d.y-max_text_width/2), d.x];
-						        break;
-						    case "Vertical_tb":
-						        return [d.x, d.y+(max_text_height/2)];
-						        break;
-						    case "Vertical_bt":
-						    	return [d.x, d.y-(max_text_height/2)];
-						        break;
-						    default:
-						    	//default will assume horinzontal left to right
-						        vis.attr("transform", "translate("+ vis_add_rect_width +","+ margin.top + ")" ); 
-						        break;
-							}
-						}
-					}
-					else 
-						return tree_orientation=="Horizontal" ? [d.y, d.x] : [d.x, d.y];
+			var diagonal = d3.svg.diagonal().projection(function(d) { 
+					if(treeProperties.treeLayout.typeOfLeaf=="Rectangle")
+						return tree_orientation=="Horizontal" ? [d.y+(max_text_width/2), d.x/*+(max_text_height)*/] : [d.x, d.y+(max_text_height/2)]; 
+					return tree_orientation=="Horizontal" ? [d.y, d.x] : [d.x, d.y];
 				})
 				.source(function source(d) { 
 					return d.source;
 				})
-				.target(function target(d) {  //diagonal (stroke) target
-					if(treeProperties.treeLayout.typeOfLeaf=="Rectangle"){
-						if(treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_html'){
-							switch(treeProperties.treeLayout.orientation) {
-						    case "Horizontal_lr":
-						        d.target.y = d.target.y-treeProperties.treeLayout.rectangle.width;
-						        break;
-						    case "Horizontal_rl":
-						        d.target.y = d.target.y+treeProperties.treeLayout.rectangle.width;
-						        break;
-						    case "Vertical_tb":
-						        d.target.y = d.target.y-(treeProperties.treeLayout.rectangle.height);
-						        break;
-						    case "Vertical_bt":
-						    	d.target.y = d.target.y+(treeProperties.treeLayout.rectangle.height);
-						        break;
-						    default:
-						    	//default will assume horinzontal left to right
-						        vis.attr("transform", "translate("+ vis_add_rect_width +","+ margin.top + ")" ); 
-						        break;
-							}
-						}else{
-							switch(treeProperties.treeLayout.orientation) {
-						    case "Horizontal_lr":
-						        d.target.y = d.target.y-(max_text_width);
-						        break;
-						    case "Horizontal_rl":
-						        d.target.y = d.target.y+(max_text_width);
-						        d.target.y0 = d.target.y0-(max_text_width);
-						        break;
-						    case "Vertical_tb":
-						        d.target.y = d.target.y-(max_text_height);
-						        break;
-						    case "Vertical_bt":
-						    	d.target.y = d.target.y+(max_text_height);
-						        break;
-						    default:
-						    	//default will assume horinzontal left to right
-						        vis.attr("transform", "translate("+ vis_add_rect_width +","+ margin.top + ")" ); 
-						        break;
-							}
-						}
+				.target(function target(d) { //SIZING
+					if(treeProperties.treeLayout.typeOfLeaf=="Rectangle" && tree_orientation=="Horizontal") 
+					{
+						d.target.y = d.target.y-(max_text_width);
+					    d.target.y0 = d.target.y0-(max_text_width);
 					}
 					return d.target;
 				});
@@ -958,14 +839,11 @@ function renderChart(planted_tree, element, object_id, treeProperties) {
 		  	function toggleAll(d) {
 			    if (d.children) {
 			      	d.children.forEach(toggleAll);
+			      	if(treeProperties.treeLayout.typeOfLeaf=="Rectangle" && treeProperties.treeStructure.defineCollapseLevel && d.depth+1>=treeProperties.treeStructure.collapseLevel){
+			      		toggle(d);
+			      	}
 			      	if(treeProperties.treeLayout.typeOfLeaf=="Circle" &&treeProperties.treeStructure.defineCollapseLevel && d.depth>=treeProperties.treeStructure.collapseLevel){
 			      		toggle(d);
-			      	}if(treeProperties.treeLayout.typeOfLeaf=="Rectangle" && treeProperties.treeStructure.defineCollapseLevel){
-			      		if(treeProperties.treeLayout.rectangle.measureSetRenderType != 'measure_html' && d.depth+1>=treeProperties.treeStructure.collapseLevel){
-			      			toggle(d);
-			      		}if(treeProperties.treeLayout.rectangle.measureSetRenderType == 'measure_html' && d.depth>=treeProperties.treeStructure.collapseLevel){
-			      			toggle(d);
-			      		}
 			      	}
 			    }
 			}
@@ -975,6 +853,7 @@ function renderChart(planted_tree, element, object_id, treeProperties) {
 			}
 			else
 				root.children.forEach(toggleAll);
+			
 			update(root);
 }
 
